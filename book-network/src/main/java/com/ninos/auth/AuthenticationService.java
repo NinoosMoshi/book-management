@@ -1,14 +1,18 @@
 package com.ninos.auth;
 
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.ninos.email.EmailService;
+import com.ninos.email.EmailTemplateName;
 import com.ninos.role.RoleRepository;
 import com.ninos.user.Token;
 import com.ninos.user.TokenRepository;
@@ -23,9 +27,13 @@ public class AuthenticationService {
     private final RoleRepository roleRepository;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+
+    @Value("${application.mailing.frontend.activation-url}")
+    String activationUrl;
 
 
-    public void register(RegistrationRequest request) {
+    public void register(RegistrationRequest request) throws MessagingException {
        var userRole = roleRepository.findByName("USER")
                // todo - better exception handling
                .orElseThrow(() -> new IllegalStateException("ROLE USER was not initialized"));
@@ -45,9 +53,18 @@ public class AuthenticationService {
        sendValidationEmail(user);
     }
 
-    private void sendValidationEmail(User user) {
+    private void sendValidationEmail(User user) throws MessagingException {
         var newToken = generateAndSaveActivationToken(user);
-        // send email
+
+
+        emailService.sendEmail(user.getEmail(),
+                               user.fullName(),
+                               EmailTemplateName.ACTIVATE_ACCOUNT,
+                               activationUrl,
+                               newToken,
+                               "Account activation"
+        );
+
 
     }
 
