@@ -5,15 +5,19 @@ import lombok.RequiredArgsConstructor;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.ninos.email.EmailService;
 import com.ninos.email.EmailTemplateName;
 import com.ninos.role.RoleRepository;
+import com.ninos.security.JwtService;
 import com.ninos.user.Token;
 import com.ninos.user.TokenRepository;
 import com.ninos.user.User;
@@ -28,6 +32,8 @@ public class AuthenticationService {
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
     @Value("${application.mailing.frontend.activation-url}")
     String activationUrl;
@@ -39,8 +45,8 @@ public class AuthenticationService {
                .orElseThrow(() -> new IllegalStateException("ROLE USER was not initialized"));
 
        var user = User.builder()
-               .firstName(request.getFirstName())
-               .lastName(request.getLastName())
+               .firstname(request.getFirstname())
+               .lastname(request.getLastname())
                .email(request.getEmail())
                .password(passwordEncoder.encode(request.getPassword()))
                .accountLocked(false)
@@ -91,6 +97,21 @@ public class AuthenticationService {
         }
         return codeBuilder.toString();
     }
+
+
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        var auth = authenticationManager
+                .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(),request.getPassword()));
+
+        var claims = new HashMap<String, Object>();
+        var user = (User)auth.getPrincipal();
+        claims.put("fullName", user.fullName());
+        var jwtToken = jwtService.generateToken(claims, user);
+        return AuthenticationResponse.builder().token(jwtToken).build();
+    }
+
+
+
 
 
 }
