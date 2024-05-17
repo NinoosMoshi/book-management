@@ -11,7 +11,7 @@ import com.ninos.role.Role;
 import com.ninos.role.RoleRepository;
 
 @SpringBootApplication
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 @EnableAsync
 public class BookNetworkApplication {
 
